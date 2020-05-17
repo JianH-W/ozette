@@ -167,7 +167,7 @@ char32_t Editor::Document::codepoint(location_t loc) const {
 		out = ch & 0x1F;
 		continuations = 1;
 		minimum = 0x80;
-	} else if ((ch & 0xF) == 0xE0) { // three bytes
+	} else if ((ch & 0xF0) == 0xE0) { // three bytes
 		out = ch & 0x0F;
 		continuations = 2;
 		minimum = 0x800;
@@ -175,6 +175,14 @@ char32_t Editor::Document::codepoint(location_t loc) const {
 		out = ch & 0x07;
 		continuations = 3;
 		minimum = 0x10000;
+	} else if ((ch & 0xFC) == 0xF8) {
+		out = ch & 0x03;
+		continuations = 2;
+		minimum = 0x200000;
+	} else if ((ch & 0xFE) == 0xFC) {
+		out = ch & 0x01;
+		continuations = 2;
+		minimum = 0x4000000;
 	} else {
 		// all other leading bytes are illegal: it's either an overlong sequence
 		// (5 or 6 bytes) or it's an out-of-place continuation character.

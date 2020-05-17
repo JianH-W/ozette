@@ -19,6 +19,10 @@
 #include <cctype>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE
+#endif
+#include <wchar.h>
 #include "app/control.h"
 #include "app/path.h"
 #include "dialog/confirmation.h"
@@ -178,26 +182,50 @@ void Editor::View::paint_line(WINDOW *dest, row_t v, State state) {
 	unsigned hoff = _scroll.h;
 	column_t h = 0;
 	unsigned width = _width + hoff;
-	size_t style_index = 0;
-	for (char ch: text) {
-		if (h == width) break;
-		if (active) {
-			wattrset(dest, style[style_index++]);
-		}
+	// size_t style_index = 0;
+	// for (char ch: text) {
+	// 	if (h == width) break;
+	// 	if (active) {
+	// 		wattrset(dest, style[style_index++]);
+	// 	}
+	// 	// If it's a normal character, just draw it. If it's a tab, draw a
+	// 	// bullet, then add spaces up til the next tab stop.
+	// 	if (ch != '\t') {
+	// 		if (h >= hoff) waddch(dest, ch);
+	// 		h++;
+	// 	} else {
+	// 		chtype bullet = ACS_BULLET;
+	// 		do {
+	// 			if (h >= hoff) waddch(dest, bullet);
+	// 			h++;
+	// 			bullet = ' ';
+	// 		} while (h < width && 0 != h % _config.indent_size());
+	// 	}
+	// }
+
+	chtype ch;
+	for (location_t i = _doc.home(index); i < _doc.end(index); i = _doc.next_char(i)) {
+		if (h >= width) break;
+		// if (active) {
+		// 	wattrset(dest, style[style_index++]);
+		// }
+
+		ch = _doc.codepoint(i);
 		// If it's a normal character, just draw it. If it's a tab, draw a
-		// bullet, then add spaces up til the next tab stop.
-		if (ch != '\t') {
+	 	// bullet, then add spaces up til the next tab stop.
+	 	if (ch != '\t') {
 			if (h >= hoff) waddch(dest, ch);
-			h++;
-		} else {
-			chtype bullet = ACS_BULLET;
-			do {
-				if (h >= hoff) waddch(dest, bullet);
-				h++;
-				bullet = ' ';
-			} while (h < width && 0 != h % _config.indent_size());
-		}
+	 		h += std::max(wcwidth(ch), 1);
+	 	} else {
+	 		chtype bullet = ACS_BULLET;
+	 		do {
+	 			if (h >= hoff) waddch(dest, bullet);
+	 			h++;
+	 			bullet = ' ';
+	 		} while (h < width && 0 != h % _config.indent_size());
+	 	}
 	}
+
 	wattrset(dest, UI::Colors::content(active));
 	if (h < width) {
 		wclrtoeol(dest);
@@ -637,10 +665,12 @@ Editor::column_t Editor::View::column(location_t loc) {
 	// On which screen column does the character at this location appear?
 	column_t col = 0;
 	for (location_t i = _doc.home(loc); i < loc; i = _doc.next_char(i)) {
-		++col;
 		char32_t ch = _doc.codepoint(i);
 		if (ch == '\t') {
+			++col;
 			col += (_config.indent_size() - col % _config.indent_size());
+		} else {
+			col += std::max(wcwidth(ch), 1);
 		}
 	}
 	return col;
