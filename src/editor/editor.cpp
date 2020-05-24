@@ -186,7 +186,7 @@ void Editor::View::paint_line(WINDOW *dest, row_t v, State state) {
 	unsigned width = _width + hoff;
 	size_t style_index = 0;
 	int len;
-	chtype ch;
+	wchar_t ch;
 	char cell[7] = {0};
 	for (location_t i = _doc.home(index); i < _doc.end(index); i = _doc.next_char(i)) {
 		if (h >= width) break;
