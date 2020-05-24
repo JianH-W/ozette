@@ -163,6 +163,8 @@ void Editor::View::paint_line(WINDOW *dest, row_t v, State state) {
 	if (!_update.is_dirty(index)) return;
 	wmove(dest, (int)v, 0);
 	const std::string &text = _doc.line(index);
+	if (text.empty())
+		return;
 
 	std::vector<int> style(text.size());
 	static Regex trailing_space("[[:space:]]+$");
@@ -182,39 +184,22 @@ void Editor::View::paint_line(WINDOW *dest, row_t v, State state) {
 	unsigned hoff = _scroll.h;
 	column_t h = 0;
 	unsigned width = _width + hoff;
-	// size_t style_index = 0;
-	// for (char ch: text) {
-	// 	if (h == width) break;
-	// 	if (active) {
-	// 		wattrset(dest, style[style_index++]);
-	// 	}
-	// 	// If it's a normal character, just draw it. If it's a tab, draw a
-	// 	// bullet, then add spaces up til the next tab stop.
-	// 	if (ch != '\t') {
-	// 		if (h >= hoff) waddch(dest, ch);
-	// 		h++;
-	// 	} else {
-	// 		chtype bullet = ACS_BULLET;
-	// 		do {
-	// 			if (h >= hoff) waddch(dest, bullet);
-	// 			h++;
-	// 			bullet = ' ';
-	// 		} while (h < width && 0 != h % _config.indent_size());
-	// 	}
-	// }
-
+	size_t style_index = 0;
+	int len;
 	chtype ch;
+	char cell[7] = {0};
 	for (location_t i = _doc.home(index); i < _doc.end(index); i = _doc.next_char(i)) {
 		if (h >= width) break;
-		// if (active) {
-		// 	wattrset(dest, style[style_index++]);
-		// }
+		if (active) {
+			wattrset(dest, style[style_index++]);
+		}
 
 		ch = _doc.codepoint(i);
 		// If it's a normal character, just draw it. If it's a tab, draw a
 	 	// bullet, then add spaces up til the next tab stop.
 	 	if (ch != '\t') {
-			if (h >= hoff) waddch(dest, ch);
+			len = wctomb(cell, ch);
+			if (h >= hoff) waddnstr(dest, cell, std::max(len, 0));
 	 		h += std::max(wcwidth(ch), 1);
 	 	} else {
 	 		chtype bullet = ACS_BULLET;
